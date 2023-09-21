@@ -1,26 +1,60 @@
 import { Injectable } from '@nestjs/common';
-import { CreateSyncserviceDto } from './dto/create-syncservice.dto';
-import { UpdateSyncserviceDto } from './dto/update-syncservice.dto';
+import { HttpService } from '@nestjs/axios';
+import { AxiosRequestConfig } from 'axios';
+import { map } from 'rxjs';
 
 @Injectable()
 export class SyncserviceService {
-  create(createSyncserviceDto: CreateSyncserviceDto) {
-    return 'This action adds a new syncservice';
+  requestConfig: AxiosRequestConfig = {
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  };
+  constructor(private readonly httpService: HttpService) {}
+
+  getAccount(address: string) {
+    
+    const payload = {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "method": "getAccount",
+      "params": [
+          address
+      ]
+    }
+    return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
+      map(resp => resp.data)
+    )
   }
 
-  findAll() {
-    return `This action returns all syncservice`;
+  getAccountBalance(addcountId: string) {
+    const payload = {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "method": "getAccountBalances",
+      "params": [
+          +addcountId,
+          1 //always the #x sub-account, x depends on which sub-account our app want to use
+      ]
+    }
+    return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
+      map(resp => resp.data)
+    )
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} syncservice`;
+  getAccountOrderAndSlot(addcountId: string) {
+    const payload = {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "method": "getAccountOrderSlots",
+      "params": [
+          +addcountId,
+          1 //always the #x sub-account, x depends on which sub-account our app want to use
+      ]
+    }
+    return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
+      map(resp => resp.data)
+    )
   }
 
-  update(id: number, updateSyncserviceDto: UpdateSyncserviceDto) {
-    return `This action updates a #${id} syncservice`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} syncservice`;
-  }
 }
