@@ -57,4 +57,35 @@ export class SyncserviceService {
     )
   }
 
+  getAccountBlockHeightData(addcountaddress: string, subaccountId: string, blockHeight: string) {
+    const payload = {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "method": "getAccountSnapshot",
+      "params": [
+          addcountaddress,
+          subaccountId,
+          blockHeight
+      ]
+    }
+    return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
+      map(resp => resp.data)
+    )
+  }
+
+  getTransactionDetail(txHash: string, stateChange: boolean) {
+    const payload = {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "method": "getTransactionByHash",
+      "params": [
+        txHash,
+        stateChange
+      ]
+    }
+    return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
+      map(resp => resp.data)
+    )
+  }
+
 }
