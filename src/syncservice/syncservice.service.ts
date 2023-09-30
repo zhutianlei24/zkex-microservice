@@ -34,7 +34,7 @@ export class SyncserviceService {
       "method": "getAccountBalances",
       "params": [
           +addcountId,
-          1 //always the #x sub-account, x depends on which sub-account our app want to use
+          4 //always the #x sub-account, x depends on which sub-account our app want to use
       ]
     }
     return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
@@ -49,7 +49,7 @@ export class SyncserviceService {
       "method": "getAccountOrderSlots",
       "params": [
           +addcountId,
-          1 //always the #x sub-account, x depends on which sub-account our app want to use
+          4 //always the #x sub-account, x depends on which sub-account our app want to use
       ]
     }
     return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
