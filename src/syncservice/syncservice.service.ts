@@ -24,7 +24,7 @@ export class SyncserviceService {
     }
     return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
       map(resp => resp.data)
-    )
+    ).toPromise()
   }
 
   getAccountBalance(addcountId: string) {
@@ -39,7 +39,7 @@ export class SyncserviceService {
     }
     return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
       map(resp => resp.data)
-    )
+    ).toPromise()
   }
 
   getAccountOrderAndSlot(addcountId: string) {
@@ -54,7 +54,7 @@ export class SyncserviceService {
     }
     return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
       map(resp => resp.data)
-    )
+    ).toPromise()
   }
 
   getAccountBlockHeightData(addcountaddress: string, subaccountId: string, blockHeight: string) {
@@ -70,7 +70,7 @@ export class SyncserviceService {
     }
     return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
       map(resp => resp.data)
-    )
+    ).toPromise()
   }
 
   getTransactionDetail(txHash: string, stateChange: boolean) {
@@ -85,7 +85,7 @@ export class SyncserviceService {
     }
     return this.httpService.post("https://aws-gw-v2.zk.link", payload, this.requestConfig).pipe(
       map(resp => resp.data)
-    )
+    ).toPromise()
   }
 
 }
