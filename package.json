@@ -29,6 +29,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "axios": "^1.5.0",
     "cache-manager": "^5.2.3",
+    "ethers": "^6.8.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "web3": "^4.2.0",
