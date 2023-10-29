@@ -1,12 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { GlobalService } from 'src/utils/gloabl.service';
 import { CreateTradeDto } from './dto/create-trade.dto';
-import * as zklink from 'zklink-js-sdk';
-import Web3 from 'web3';
 import { EthMessageSigner } from 'zklink-js-sdk/build/eth-message-signer';
 import { ethers } from 'ethers';
 import { Signer } from 'zklink-js-sdk/build/signer';
 import { OrderData, OrderMatchingEntries } from 'zklink-js-sdk';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class TradeService {
@@ -15,8 +15,10 @@ export class TradeService {
     return [...GlobalService.buyOrders, ...GlobalService.sellOrders];
   }
 
-  buyOrderMatching(createTradeDto: CreateTradeDto) {
-    const provider = new ethers.JsonRpcProvider(process.env.INFURA_ENDPOINT)
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+
+  async buyOrderMatching(createTradeDto: CreateTradeDto) {
+    const provider = new ethers.providers.JsonRpcProvider(process.env.INFURA_ENDPOINT)
 
     // Initialize the zkSigner and ethSigner for submitter
     const zkSignerSubmitter = Signer.fromPrivateKey(Uint8Array.from(Array.from(process.env.ZKLINK_SUBMITTER_PRIVATEKEY).map(letter => letter.charCodeAt(0))));
@@ -38,7 +40,9 @@ export class TradeService {
       let buyPrice = createTradeDto.price;
       let residue = createTradeDto.amount;
 
-      for(let sellOrder of  GlobalService.sellOrders) {
+      const user: any = await this.cacheManager.get(process.env.USER_ADDRESS);
+
+      for(let sellOrder of GlobalService.sellOrders) {
         // eat up
         if(residue <= 0) {
           break;
@@ -48,7 +52,7 @@ export class TradeService {
           // construct the order
           const order_data_taker = {
             type: 'order',
-            account_id: ???,
+            account_id: user.account_id,
             sub_account_id: 4,
             slot: 1,
             nonce: 1,
@@ -64,7 +68,7 @@ export class TradeService {
           
         const order_data_maker = {
           type: 'order',
-          account_id: ???,
+          account_id: 209, // hard coded as our submitter's
           sub_account_id: 4,
           slot: 1,
           nonce: 1,
@@ -78,7 +82,7 @@ export class TradeService {
         } as unknown as OrderData 
 
         const order_matching = {
-          accountId: ???,
+          accountId: 209, // hard coded as our submitter's
           subAccountId: 4,
           taker: order_data_taker,
           maker: order_data_maker,
