@@ -17,7 +17,7 @@ export class TradeService {
 
   constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
 
-  async buyOrderMatching(createTradeDto: CreateTradeDto) {
+  async buyOrderMatching(address: string, createTradeDto: CreateTradeDto) {
     const provider = new ethers.providers.JsonRpcProvider(process.env.INFURA_ENDPOINT)
 
     // Initialize the zkSigner and ethSigner for submitter
@@ -40,7 +40,7 @@ export class TradeService {
       let buyPrice = createTradeDto.price;
       let residue = createTradeDto.amount;
 
-      const user: any = await this.cacheManager.get(process.env.USER_ADDRESS);
+      const user: any = await this.cacheManager.get(address);
 
       for(let sellOrder of GlobalService.sellOrders) {
         // eat up
@@ -97,7 +97,7 @@ export class TradeService {
     }
   }
 
-  sellOrderMatching(createTradeDto: CreateTradeDto) {
+  sellOrderMatching(address: string, createTradeDto: CreateTradeDto) {
     if (createTradeDto.price > GlobalService.buyOrders[0].price)
     {
       // add this sell order to the sell order list and sort it with price asc

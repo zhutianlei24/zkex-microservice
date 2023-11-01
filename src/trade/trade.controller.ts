@@ -6,19 +6,19 @@ import { CreateTradeDto } from './dto/create-trade.dto';
 export class TradeController {
   constructor(private readonly tradeService: TradeService) {}
 
-  @Get()
-  existingOrder () {
+  @Get(':address')
+  existingOrders() {
     return this.tradeService.getOrders();
   }
 
-  @Post()
-  buyOrderMatching(@Body() createTradeDto: CreateTradeDto) {
-    return this.tradeService.buyOrderMatching(createTradeDto);
+  @Post('buyOrder/:address')
+  buyOrderMatching(@Param('address') address, @Body() createTradeDto: CreateTradeDto) {
+    return this.tradeService.buyOrderMatching(address, createTradeDto);
   }
 
-  @Post()
-  sellOrderMatching(@Body() createTradeDto: CreateTradeDto) {
-    return this.tradeService.sellOrderMatching(createTradeDto);
+  @Post('sellOrder/:address')
+  sellOrderMatching(@Param('address') address, @Body() createTradeDto: CreateTradeDto) {
+    return this.tradeService.sellOrderMatching(address, createTradeDto);
   }
 
 }
