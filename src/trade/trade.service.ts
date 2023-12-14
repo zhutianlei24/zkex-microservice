@@ -4,9 +4,10 @@ import { CreateTradeDto } from './dto/create-trade.dto';
 import { EthMessageSigner } from 'zklink-js-sdk/build/eth-message-signer';
 import { ethers } from 'ethers';
 import { Signer } from 'zklink-js-sdk/build/signer';
-import { OrderData, OrderMatchingEntries } from 'zklink-js-sdk';
+import { OrderData, OrderMatchingData } from 'zklink-js-sdk';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import sha256 from 'crypto-js/sha256';
 
 @Injectable()
 export class TradeService {
@@ -53,7 +54,7 @@ export class TradeService {
           const order_data_taker = {
             type: 'order',
             account_id: user.account_id,
-            sub_account_id: 4,
+            sub_account_id: 1,
             slot: 1,
             nonce: 1,
             baseTokenId: 141,
@@ -64,12 +65,13 @@ export class TradeService {
             taker_fee_ratio: 255,
             maker_fee_ratio:255
           } as unknown as OrderData 
+        const taker_signature = (await zkSingerUser.signOrder(order_data_taker)).signature
 
           
         const order_data_maker = {
           type: 'order',
           account_id: 209, // hard coded as our submitter's
-          sub_account_id: 4,
+          sub_account_id: 1,
           slot: 1,
           nonce: 1,
           baseTokenId: 141,
@@ -80,18 +82,21 @@ export class TradeService {
           taker_fee_ratio: 255,
           maker_fee_ratio:255
         } as unknown as OrderData 
+        const maker_signature = (await zkSignerSubmitter.signOrder(order_data_maker)).signature
 
         const order_matching = {
           accountId: 209, // hard coded as our submitter's
-          subAccountId: 4,
+          subAccountId: 1,
           taker: order_data_taker,
           maker: order_data_maker,
           expectBaseAmount: sellOrder.amount * 10 ** 18,
           expectQuoteAmount: sellOrder.price * 10 ** 18,
-          feeTokenId: 141,
+          feeToken: 141,
           feeTokenSymbol: 'WETH',
           fee: 405000000000000,
-        } as unknown as OrderMatchingEntries 
+        } as unknown as OrderMatchingData
+        const ordermatchingSignature = zkSignerSubmitter.signOrderMatching(order_matching)
+        const hashDigest = sha256(ordermatchingSignature)
       } 
       }
     }

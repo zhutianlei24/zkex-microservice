@@ -23,7 +23,7 @@ export class UserService {
       console.log(userInfo);
       // Get userBalance
       const userBalance = await this.fetchUserBalance(userInfo.result?.id);
-      const userWallet = userBalance.result['4'];
+      const userWallet = userBalance.result['1'];
       console.log(userWallet);
       // Init user balance
       if (userWallet) {
@@ -35,7 +35,7 @@ export class UserService {
       }
       // Get user slot and nonce
       const userSlotAndNonce = await this.fetchUserSlotAndNonce(userInfo.result?.id);
-      const orderList = userSlotAndNonce.result['4'];
+      const orderList = userSlotAndNonce.result['1'];
       console.log(orderList)
       // Init user slot and nonce
       if (orderList) {
