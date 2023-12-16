@@ -3,12 +3,13 @@ import { GlobalService } from 'src/utils/gloabl.service';
 import { CreateTradeDto } from './dto/create-trade.dto';
 import { EthMessageSigner } from 'zklink-js-sdk/build/eth-message-signer';
 import { ethers } from 'ethers';
-import { Signer } from 'zklink-js-sdk/build/signer';
+// import { Signer } from 'zklink-js-sdk/build/signer';
 import { OrderData, OrderMatchingData } from 'zklink-js-sdk';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import sha256 from 'crypto-js/sha256';
-
+import init, *  as wasm from "../../web-dist/zklink-sdk-web.js";
+const {ContractMatchingBuilder,Signer,newContractMatching,newContract,ContractBuilder,RpcClient } = require('./node-dist/zklink-sdk-node');
 @Injectable()
 export class TradeService {
   // return the current orders
@@ -19,16 +20,9 @@ export class TradeService {
   constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
 
   async buyOrderMatching(address: string, createTradeDto: CreateTradeDto) {
-    const provider = new ethers.providers.JsonRpcProvider(process.env.INFURA_ENDPOINT)
-
-    // Initialize the zkSigner and ethSigner for submitter
-    const zkSignerSubmitter = Signer.fromPrivateKey(Uint8Array.from(Array.from(process.env.ZKLINK_SUBMITTER_PRIVATEKEY).map(letter => letter.charCodeAt(0))));
-    const ethSignerSubmitter = new EthMessageSigner(new ethers.Wallet(process.env.ZKLINK_SUBMITTER_PRIVATEKEY, provider))
-
-    // Initialize the zkSigner and ethSigner for User
-    const zkSingerUser = Signer.fromPrivateKey(Uint8Array.from(Array.from(process.env.USER_PRIVATEKEY).map(letter => letter.charCodeAt(0))));
-    const ethSignerUser = new EthMessageSigner(new ethers.Wallet(process.env.USER_PRIVATEKEY, provider))
-
+    const userSigner = new Signer(process.env.USER_PRIVATEKEY, 1)
+    const zkLinkSigner = new Signer(process.env.ZKLINK_SUBMITTER_PRIVATEKEY, 1)
+  
     if (createTradeDto.price < GlobalService.sellOrders[0].price)
     {
       // add this buy order to the buy order list and sort it with price desc
@@ -50,59 +44,32 @@ export class TradeService {
         }
 
         if(buyPrice >= sellOrder.price) {
-          // construct the order
-          const order_data_taker = {
-            type: 'order',
-            account_id: user.account_id,
-            sub_account_id: 1,
-            slot: 1,
-            nonce: 1,
-            baseTokenId: 141,
-            quoteTokenId: 1,
-            price: sellOrder.price * 10 ** 18,
-            amount: sellOrder.amount * 10 ** 18,
-            is_sell: 1,
-            taker_fee_ratio: 255,
-            maker_fee_ratio:255
-          } as unknown as OrderData 
-        const taker_signature = (await zkSingerUser.signOrder(order_data_taker)).signature
+        let maker_order = new wasm.Order(user.account_id, 1, 1, 1, 141, 1, String(sellOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18), true, 255, 255, false);
+        let maker = userSigner.createSignedOrder(maker_order);
+        console.log(maker);
 
-          
-        const order_data_maker = {
-          type: 'order',
-          account_id: 209, // hard coded as our submitter's
-          sub_account_id: 1,
-          slot: 1,
-          nonce: 1,
-          baseTokenId: 141,
-          quoteTokenId: 1,
-          price: sellOrder.price * 10 ** 18,
-          amount: sellOrder.amount * 10 ** 18,
-          is_sell: 0,
-          taker_fee_ratio: 255,
-          maker_fee_ratio:255
-        } as unknown as OrderData 
-        const maker_signature = (await zkSignerSubmitter.signOrder(order_data_maker)).signature
+        let taker_order = new wasm.Order(40, 1, 1, 1, 141, 1, String(sellOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18), false, 255, 255, false);
+        let taker = zkLinkSigner.createSignedOrder(taker_order);
+        console.log(taker);
 
-        const order_matching = {
-          accountId: 209, // hard coded as our submitter's
-          subAccountId: 1,
-          taker: order_data_taker,
-          maker: order_data_maker,
-          expectBaseAmount: sellOrder.amount * 10 ** 18,
-          expectQuoteAmount: sellOrder.price * 10 ** 18,
-          feeToken: 141,
-          feeTokenSymbol: 'WETH',
-          fee: 405000000000000,
-        } as unknown as OrderMatchingData
-        const ordermatchingSignature = zkSignerSubmitter.signOrderMatching(order_matching)
-        const hashDigest = sha256(ordermatchingSignature)
+        let tx_builder = new wasm.OrderMatchingBuilder(40, 1, taker, maker, "405000000000000,", 141, [], [], String(sellOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18));
+        let order_matching = wasm.newOrderMatching(tx_builder);
+        let signature = zkLinkSigner.signOrderMatching(order_matching);
+        console.log(signature);
+
+        let submitter_signature = zkLinkSigner.submitterSignature(signature.tx);
+        console.log(submitter_signature);
+        let rpc_client = new wasm.RpcClient("testnet");
+        let tx_hash = await rpc_client.sendTransaction(signature.tx,null,submitter_signature);
+        console.log(tx_hash);
       } 
       }
     }
   }
 
-  sellOrderMatching(address: string, createTradeDto: CreateTradeDto) {
+  async sellOrderMatching(address: string, createTradeDto: CreateTradeDto) {
+    const userSigner = new Signer(process.env.USER_PRIVATEKEY, 1)
+    const zkLinkSigner = new Signer(process.env.ZKLINK_SUBMITTER_PRIVATEKEY, 1)
     if (createTradeDto.price > GlobalService.buyOrders[0].price)
     {
       // add this sell order to the sell order list and sort it with price asc
@@ -112,6 +79,38 @@ export class TradeService {
     else
     {
       // do order matching logic
+      let sellPrice = createTradeDto.price;
+      let residue = createTradeDto.amount;
+
+      const user: any = await this.cacheManager.get(address);
+
+      for(let buyOrder of GlobalService.buyOrders) {
+        // eat up
+        if(residue <= 0) {
+          break;
+        }
+
+        if(sellPrice <= buyOrder.price) {
+        let maker_order = new wasm.Order(user.account_id, 1, 1, 1, 141, 1, String(buyOrder.price * 10 ** 18), String(buyOrder.amount * 10 ** 18), true, 255, 255, false);
+        let maker = userSigner.createSignedOrder(maker_order);
+        console.log(maker);
+
+        let taker_order = new wasm.Order(40, 1, 1, 1, 141, 1, String(buyOrder.price * 10 ** 18), String(buyOrder.amount * 10 ** 18), false, 255, 255, false);
+        let taker = zkLinkSigner.createSignedOrder(taker_order);
+        console.log(taker);
+
+        let tx_builder = new wasm.OrderMatchingBuilder(40, 1, taker, maker, "405000000000000,", 141, [], [], String(buyOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18));
+        let order_matching = wasm.newOrderMatching(tx_builder);
+        let signature = zkLinkSigner.signOrderMatching(order_matching);
+        console.log(signature);
+
+        let submitter_signature = zkLinkSigner.submitterSignature(signature.tx);
+        console.log(submitter_signature);
+        let rpc_client = new wasm.RpcClient("testnet");
+        let tx_hash = await rpc_client.sendTransaction(signature.tx,null,submitter_signature);
+        console.log(tx_hash);
     }
   }
+}
+}
 }
