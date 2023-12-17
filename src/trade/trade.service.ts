@@ -8,8 +8,8 @@ import { OrderData, OrderMatchingData } from 'zklink-js-sdk';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import sha256 from 'crypto-js/sha256';
-import init, *  as wasm from "../../web-dist/zklink-sdk-web.js";
-const {ContractMatchingBuilder,Signer,newContractMatching,newContract,ContractBuilder,RpcClient } = require('./node-dist/zklink-sdk-node');
+
+const {ChangePubKeyBuilder,Signer,newChangePubkey,RpcClient, Order, OrderMatchingBuilder, newOrderMatching } = require('../../node-dist/zklink-sdk-node');
 @Injectable()
 export class TradeService {
   // return the current orders
@@ -44,22 +44,22 @@ export class TradeService {
         }
 
         if(buyPrice >= sellOrder.price) {
-        let maker_order = new wasm.Order(user.account_id, 1, 1, 1, 141, 1, String(sellOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18), true, 255, 255, false);
+        let maker_order = new Order(user.account_id, 1, 1, 1, 141, 1, String(sellOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18), true, 255, 255, false);
         let maker = userSigner.createSignedOrder(maker_order);
         console.log(maker);
 
-        let taker_order = new wasm.Order(40, 1, 1, 1, 141, 1, String(sellOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18), false, 255, 255, false);
+        let taker_order = new Order(40, 1, 1, 1, 141, 1, String(sellOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18), false, 255, 255, false);
         let taker = zkLinkSigner.createSignedOrder(taker_order);
         console.log(taker);
 
-        let tx_builder = new wasm.OrderMatchingBuilder(40, 1, taker, maker, "405000000000000,", 141, [], [], String(sellOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18));
-        let order_matching = wasm.newOrderMatching(tx_builder);
+        let tx_builder = new OrderMatchingBuilder(40, 1, taker, maker, "405000000000000,", 141, [], [], String(sellOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18));
+        let order_matching = newOrderMatching(tx_builder);
         let signature = zkLinkSigner.signOrderMatching(order_matching);
         console.log(signature);
 
         let submitter_signature = zkLinkSigner.submitterSignature(signature.tx);
         console.log(submitter_signature);
-        let rpc_client = new wasm.RpcClient("testnet");
+        let rpc_client = new RpcClient("testnet");
         let tx_hash = await rpc_client.sendTransaction(signature.tx,null,submitter_signature);
         console.log(tx_hash);
       } 
@@ -91,22 +91,22 @@ export class TradeService {
         }
 
         if(sellPrice <= buyOrder.price) {
-        let maker_order = new wasm.Order(user.account_id, 1, 1, 1, 141, 1, String(buyOrder.price * 10 ** 18), String(buyOrder.amount * 10 ** 18), true, 255, 255, false);
+        let maker_order = new Order(user.account_id, 1, 1, 1, 141, 1, String(buyOrder.price * 10 ** 18), String(buyOrder.amount * 10 ** 18), true, 255, 255, false);
         let maker = userSigner.createSignedOrder(maker_order);
         console.log(maker);
 
-        let taker_order = new wasm.Order(40, 1, 1, 1, 141, 1, String(buyOrder.price * 10 ** 18), String(buyOrder.amount * 10 ** 18), false, 255, 255, false);
+        let taker_order = new Order(40, 1, 1, 1, 141, 1, String(buyOrder.price * 10 ** 18), String(buyOrder.amount * 10 ** 18), false, 255, 255, false);
         let taker = zkLinkSigner.createSignedOrder(taker_order);
         console.log(taker);
 
-        let tx_builder = new wasm.OrderMatchingBuilder(40, 1, taker, maker, "405000000000000,", 141, [], [], String(buyOrder.price * 10 ** 18), String(sellOrder.amount * 10 ** 18));
-        let order_matching = wasm.newOrderMatching(tx_builder);
+        let tx_builder = new OrderMatchingBuilder(40, 1, taker, maker, "405000000000000,", 141, [], [], String(buyOrder.price * 10 ** 18), String(buyOrder.amount * 10 ** 18));
+        let order_matching = newOrderMatching(tx_builder);
         let signature = zkLinkSigner.signOrderMatching(order_matching);
         console.log(signature);
 
         let submitter_signature = zkLinkSigner.submitterSignature(signature.tx);
         console.log(submitter_signature);
-        let rpc_client = new wasm.RpcClient("testnet");
+        let rpc_client = new RpcClient("testnet");
         let tx_hash = await rpc_client.sendTransaction(signature.tx,null,submitter_signature);
         console.log(tx_hash);
     }
